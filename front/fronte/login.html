@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Connexion — Préfacture · SCG</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="login">
+    <section class="login__left">
+      <div class="brand">
+        <div class="brand__eyebrow">République Tunisienne</div>
+        <div class="brand__name">Société des<br />Ciments de Gabès</div>
+        <div class="brand__app">Préfacture · v1.0</div>
+        <div class="login__utility">
+          <div class="login__pill">Système opérationnel</div>
+          <div class="login__card">
+            <div class="login__card-label">Dernière synchronisation</div>
+            <div class="login__card-value">OCR actif · 2 min</div>
+          </div>
+        </div>
+      </div>
+      <div class="login__footer">
+        Accès réservé au personnel autorisé · Toute connexion est journalisée
+      </div>
+    </section>
+    <section class="login__right">
+      <form class="login__form" id="loginForm">
+        <div class="login__notice">Connexion sécurisée</div>
+        <h1 class="login__title">Connexion</h1>
+        <p class="login__sub">Identifiez-vous pour accéder aux factures et au suivi des scans.</p>
+        <div class="field">
+          <label class="field__label" for="username">Matricule</label>
+          <input class="input" id="username" type="text" placeholder="Ex. SCG-0421" autocomplete="username" required />
+        </div>
+        <div class="field">
+          <label class="field__label" for="password">Mot de passe</label>
+          <input class="input" id="password" type="password" placeholder="••••••••" autocomplete="current-password" required />
+        </div>
+        <div class="field" id="formError" hidden style="color: #a83a3a; font-size: 12px;"></div>
+        <button type="submit" class="btn btn--primary btn--block" style="margin-top: 10px;">Se connecter</button>
+      </form>
+    </section>
+  </main>
+  <script src="api.js"></script>
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const erreurDiv = document.getElementById('formError');
+
+      try {
+          const utilisateur = await window.preFactureApi.login(username, password);
+          window.preFactureApi.setAuthContext(utilisateur);
+          // respect a 'next' param when present so we return the user to their original page
+          const params = new URLSearchParams(window.location.search);
+          const next = params.get('next');
+          const safeNext = next && !/^https?:\/\//i.test(next) ? decodeURIComponent(next) : null;
+          if (safeNext) {
+            window.location.href = safeNext;
+          } else {
+            window.location.href = utilisateur.role === 'ADMIN' ? 'utilisateurs.html' : 'dashboard.html';
+          }
+      } catch (error) {
+        erreurDiv.textContent = error.message || 'Impossible de se connecter.';
+        erreurDiv.hidden = false;
+      }
+    });
+  </script>
+</body>
+</html>

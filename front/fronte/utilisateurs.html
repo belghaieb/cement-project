@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Utilisateurs — Préfacture · SCG</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" data-shell="sidebar"></aside>
+    <header class="topbar">
+      <div class="topbar__crumbs">Préfacture / <strong>Utilisateurs</strong></div>
+      <div class="topbar__right" data-shell="topbar-right"></div>
+    </header>
+    <main class="main">
+      <div class="page-head">
+        <div>
+          <h1 class="page-head__title">Gestion des utilisateurs</h1>
+          <div class="page-head__sub">Administration des comptes applicatifs.</div>
+        </div>
+      </div>
+
+      <div id="admin-feedback" class="alert" hidden></div>
+
+      <section class="panel" style="margin-bottom: 16px;">
+        <div class="panel__head">
+          <div class="panel__title">Créer un utilisateur</div>
+        </div>
+        <div class="review__panel-body" style="padding-top: 12px;">
+          <form id="form-create-user" style="display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(220px, 1fr));">
+            <div class="field" style="margin: 0;">
+              <label class="field__label" for="username">Username</label>
+              <input id="username" class="input" type="text" required />
+            </div>
+            <div class="field" style="margin: 0;">
+              <label class="field__label" for="password">Mot de passe</label>
+              <input id="password" class="input" type="password" required />
+            </div>
+            <div class="field" style="margin: 0;">
+              <label class="field__label" for="nomComplet">Nom complet</label>
+              <input id="nomComplet" class="input" type="text" required />
+            </div>
+            <div class="field" style="margin: 0;">
+              <label class="field__label" for="role">Rôle</label>
+              <select id="role" class="select" required>
+                <option value="ADMIN">ADMIN</option>
+                <option value="RESPONSABLE_FACTURE">RESPONSABLE_FACTURE</option>
+                <option value="IT">IT</option>
+              </select>
+            </div>
+            <div style="grid-column: 1 / -1;">
+              <button type="submit" class="btn btn--primary btn--sm">Créer</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel__head">
+          <div class="panel__title">Utilisateurs</div>
+        </div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Nom complet</th>
+              <th>Rôle</th>
+              <th>Statut</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="users-body">
+            <tr>
+              <td colspan="5">
+                <div class="empty">
+                  <div class="empty__title">Aucune donnée</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+  <script src="api.js"></script>
+  <script src="app.js"></script>
+  <script>
+    function afficherFeedback(message, estErreur) {
+      const bloc = document.getElementById('admin-feedback');
+      if (!bloc) return;
+      bloc.hidden = false;
+      bloc.textContent = message;
+      bloc.style.background = estErreur ? '#fceaea' : '#ecf6ed';
+      bloc.style.borderLeftColor = estErreur ? '#a83a3a' : '#2f7a3a';
+      bloc.style.color = estErreur ? '#a83a3a' : '#2f7a3a';
+    }
+
+    function estActif(utilisateur) {
+      if (typeof utilisateur.actif === 'boolean') return utilisateur.actif;
+      if (typeof utilisateur.desactive === 'boolean') return !utilisateur.desactive;
+      return true;
+    }
+
+    async function chargerUtilisateurs() {
+      const tbody = document.getElementById('users-body');
+      try {
+        const utilisateurs = await window.preFactureApi.adminListUtilisateurs();
+        const rows = Array.isArray(utilisateurs) ? utilisateurs : [];
+        if (!rows.length) {
+          tbody.innerHTML = '<tr><td colspan="5"><div class="empty"><div class="empty__title">Aucun utilisateur</div></div></td></tr>';
+          return;
+        }
+        tbody.innerHTML = rows.map((u) => {
+          const actif = estActif(u);
+          return `
+            <tr>
+              <td>${u.username || '—'}</td>
+              <td>${u.nomComplet || '—'}</td>
+              <td>${u.role || '—'}</td>
+              <td>${actif ? 'Actif' : 'Désactivé'}</td>
+              <td>
+                ${actif ? `<button type="button" class="btn btn--danger btn--sm" data-desactiver-id="${u.id}">Désactiver</button>` : '—'}
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        tbody.querySelectorAll('[data-desactiver-id]').forEach((button) => {
+          button.addEventListener('click', async () => {
+            const id = button.getAttribute('data-desactiver-id');
+            if (!id) return;
+            try {
+              await window.preFactureApi.adminDesactiverUtilisateur(id);
+              afficherFeedback('Utilisateur désactivé.', false);
+              await chargerUtilisateurs();
+            } catch (error) {
+              afficherFeedback(error.message || 'Échec de désactivation.', true);
+            }
+          });
+        });
+      } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="5">${error.message || 'Erreur de chargement.'}</td></tr>`;
+      }
+    }
+
+    document.getElementById('form-create-user')?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const username = (document.getElementById('username')?.value || '').trim();
+      const password = document.getElementById('password')?.value || '';
+      const nomComplet = (document.getElementById('nomComplet')?.value || '').trim();
+      const role = document.getElementById('role')?.value;
+      try {
+        await window.preFactureApi.adminCreateUtilisateur({ username, password, nomComplet, role });
+        afficherFeedback('Utilisateur créé.', false);
+        event.target.reset();
+        await chargerUtilisateurs();
+      } catch (error) {
+        afficherFeedback(error.message || 'Échec de création utilisateur.', true);
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const utilisateur = await window.verifierSession();
+      if (!utilisateur) return;
+      if (utilisateur.role !== 'ADMIN') {
+        window.location.href = 'dashboard.html';
+        return;
+      }
+      document.body.dataset.role = 'admin';
+      await chargerUtilisateurs();
+    });
+  </script>
+</body>
+</html>

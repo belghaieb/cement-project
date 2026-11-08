@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tableau de bord — Préfacture · SCG</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" data-shell="sidebar"></aside>
+    <header class="topbar">
+      <div class="topbar__crumbs">Préfacture / <strong>Tableau de bord</strong></div>
+      <div class="topbar__right" data-shell="topbar-right"></div>
+    </header>
+    <main class="main">
+      <div class="page-head">
+        <div class="page-head__intro">
+          <div class="page-head__eyebrow">Accueil</div>
+          <h1 class="page-head__title">Tableau de bord</h1>
+          <div class="page-head__sub" id="dashboard-subtitle">Suivi simple des derniers scans.</div>
+        </div>
+        <div class="page-head__actions" id="head-actions">
+          <input type="file" accept="image/*" capture="environment" id="inputScan" hidden />
+          <button type="button" class="btn btn--primary btn--sm" id="btn-scan">Nouveau scan</button>
+          <div id="scan-progress" style="display:none; margin-top:12px; flex-basis:100%;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div class="spinner" style="width:16px;height:16px;border:2px solid var(--ciment);border-top-color:var(--acier);border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+              <span>Analyse OCR en cours… <span id="scan-timer">0</span>s</span>
+            </div>
+          </div>
+          <a href="factures.html" data-role-link class="btn btn--primary btn--sm">Voir les factures</a>
+        </div>
+      </div>
+      <section class="panel">
+        <div class="panel__head">
+          <div class="panel__title" id="activity-title">Derniers scans</div>
+          <div class="panel__tools">
+            <span id="activity-meta" style="font-family: var(--font-display); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ciment);">Chargement backend</span>
+          </div>
+        </div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Reference</th>
+              <th>Fournisseur</th>
+              <th>Date reception</th>
+              <th>Statut</th>
+              <th class="amount">Age (jours)</th>
+            </tr>
+          </thead>
+          <tbody id="recent-body">
+            <tr>
+              <td colspan="5">
+                <div class="empty">
+                  <div class="empty__title">Aucune donnée disponible</div>
+                  <div>La liste sera remplie depuis l’API Spring Boot.</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+  <script src="api.js"></script>
+  <script src="app.js"></script>
+  <script>
+    async function chargerFactures() {
+      try {
+        const factures = await window.preFactureApi.getFactures();
+        const toutesLesFactures = Array.isArray(factures) ? factures : [];
+        const rows = Array.isArray(factures) ? factures.slice(0, 6) : [];
+        const body = document.getElementById('recent-body');
+        if (!rows.length) {
+          body.innerHTML = `
+            <tr>
+              <td colspan="5">
+                <div class="empty">
+                  <div class="empty__title">Aucune donnée disponible</div>
+                  <div>La liste sera remplie depuis l’API Spring Boot.</div>
+                </div>
+              </td>
+            </tr>`;
+          return;
+        }
+        body.innerHTML = rows.map(f => `
+          <tr data-id="${f.id}">
+            <td><span class="table__ref">${f.numeroFacture || f.id}</span></td>
+            <td>${f.fournisseur || '—'}</td>
+            <td>${f.dateReception || '—'}</td>
+            <td><span class="tag tag--${window.classeStatut(f.statut) || 'pending'}">${window.libelleStatut(f.statut)}</span></td>
+            <td class="table__amount">${f.ageJours || '—'}</td>
+          </tr>
+        `).join('');
+        body.querySelectorAll('tr[data-id]').forEach(row => {
+          row.addEventListener('click', () => {
+            window.location.href = `facture.html?id=${row.dataset.id}`;
+          });
+        });
+      } catch (error) {
+        document.getElementById('recent-body').innerHTML = `<tr><td colspan="5">${error.message}</td></tr>`;
+      }
+    }
+
+    document.getElementById('btn-scan')?.addEventListener('click', () => {
+      document.getElementById('inputScan').click();
+    });
+
+    document.getElementById('inputScan')?.addEventListener('change', async (event) => {
+      const fichier = event.target.files[0];
+      if (!fichier) return;
+
+      const progressDiv = document.getElementById('scan-progress');
+      const timerSpan = document.getElementById('scan-timer');
+      progressDiv.style.display = 'block';
+
+      let secondes = 0;
+      const intervalle = setInterval(() => {
+        secondes++;
+        timerSpan.textContent = secondes;
+      }, 1000);
+
+      try {
+        const resultatScan = await window.preFactureApi.uploadScan(fichier);
+        clearInterval(intervalle);
+        progressDiv.style.display = 'none';
+
+        const facture = resultatScan?.facture || resultatScan;
+        const alertesBonCommande = Array.isArray(resultatScan?.alertesBonCommande)
+          ? resultatScan.alertesBonCommande
+          : [];
+        memoriserAlertesBonCommande(alertesBonCommande);
+        if (!facture || !facture.id) {
+          throw new Error('Réponse scan invalide: facture introuvable.');
+        }
+        window.location.href = `facture.html?id=${facture.id}`;
+      } catch (error) {
+        clearInterval(intervalle);
+        progressDiv.style.display = 'none';
+        alert(error.message || 'Échec de l\'import OCR');
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const utilisateur = await window.verifierSession();
+      if (!utilisateur) return;
+      if (utilisateur.role === 'ADMIN') {
+        window.location.href = 'utilisateurs.html';
+        return;
+      }
+      document.body.dataset.role = (utilisateur.role || '').toLowerCase();
+      document.getElementById('dashboard-subtitle').textContent = utilisateur.role === 'IT'
+        ? 'Consultation des scans et du traitement OCR.'
+        : 'Import des scans et suivi du pipeline de facturation.';
+      if (document.body.dataset.role === 'it') {
+        document.getElementById('btn-scan')?.remove();
+        document.getElementById('inputScan')?.remove();
+      }
+      await chargerFactures();
+    });
+  </script>
+</body>
+</html>

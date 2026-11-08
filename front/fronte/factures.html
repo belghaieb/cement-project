@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Factures — Préfacture · SCG</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" data-shell="sidebar"></aside>
+    <header class="topbar">
+      <div class="topbar__crumbs">Préfacture / <strong>Factures</strong></div>
+      <div class="topbar__right" data-shell="topbar-right"></div>
+    </header>
+    <main class="main">
+      <div class="page-head">
+        <div class="page-head__intro">
+          <div class="page-head__eyebrow">Registre</div>
+          <h1 class="page-head__title">Registre des scans</h1>
+          <div class="page-head__sub" id="scope-subtitle">Liste alimentée par le backend selon le scope.</div>
+        </div>
+      </div>
+      <section class="panel">
+        <div class="panel__head">
+          <div class="panel__title" id="scope-title">Registre</div>
+          <div class="panel__tools">
+            <label class="panel__filter-label" for="tri-factures">Trier</label>
+            <select id="tri-factures" class="select" style="width: auto; padding: 7px 10px; font-size: 12px;">
+              <option value="dateReception">Date réception</option>
+              <option value="dateTraitement">Date traitement</option>
+              <option value="dateFacture">Date facture</option>
+              <option value="dateEcheance">Date échéance</option>
+              <option value="fournisseur">Fournisseur</option>
+              <option value="numeroFacture">Référence</option>
+              <option value="statut">Statut</option>
+              <option value="montantTTC">Montant TTC</option>
+            </select>
+            <select id="ordre-factures" class="select" style="width: auto; padding: 7px 10px; font-size: 12px;">
+              <option value="desc">Du plus récent</option>
+              <option value="asc">Du plus ancien</option>
+            </select>
+            <select id="filtre-statut" class="select" style="width: auto; padding: 7px 10px; font-size: 12px;">
+              <option value="">Tous les statuts</option>
+              <option value="A_VERIFIER">À vérifier</option>
+              <option value="EN_COURS">En cours</option>
+              <option value="VALIDEE">Validée</option>
+              <option value="REJETEE">Rejetée</option>
+            </select>
+            <input id="filtre-date-debut" class="input" type="date" aria-label="Date début" style="width: 150px; padding: 7px 10px; font-size: 12px;" />
+            <input id="filtre-date-fin" class="input" type="date" aria-label="Date fin" style="width: 150px; padding: 7px 10px; font-size: 12px;" />
+            <input id="search-fournisseur" class="input" type="search" placeholder="Recherche fournisseur" aria-label="Recherche fournisseur" style="width: 220px; padding: 7px 10px; font-size: 12px; display: none;" />
+            <button type="button" class="input-clear" data-target="search-fournisseur" title="Effacer" style="margin-left:6px; padding:6px 8px; font-size:12px; display:none">×</button>
+            <input id="search-ref-fournisseur" class="input" type="search" placeholder="Réf fournisseur" aria-label="Réf fournisseur" style="width: 180px; padding: 7px 10px; font-size: 12px; display: none;" />
+            <button type="button" class="input-clear" data-target="search-ref-fournisseur" title="Effacer" style="margin-left:6px; padding:6px 8px; font-size:12px; display:none">×</button>
+            <input id="search-bon-commande" class="input" type="search" placeholder="N° commande" aria-label="N° commande" style="width: 180px; padding: 7px 10px; font-size: 12px; display: none;" />
+            <button type="button" class="input-clear" data-target="search-bon-commande" title="Effacer" style="margin-left:6px; padding:6px 8px; font-size:12px; display:none">×</button>
+            <button id="btn-reset-filters" class="btn btn--ghost btn--sm" type="button" title="Réinitialiser les filtres" style="margin-left:8px">Réinitialiser</button>
+          </div>
+        </div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Reference</th>
+              <th>Fournisseur</th>
+              <th>Date reception</th>
+              <th>Date traitement</th>
+              <th>Statut</th>
+              <th>Réception</th>
+              <th>OCR</th>
+              <th class="amount">Age (jours)</th>
+            </tr>
+          </thead>
+          <tbody id="rows">
+            <tr>
+              <td colspan="8">
+                <div class="empty">
+                  <div class="empty__title">Aucune donnée disponible</div>
+                  <div>Cette table sera alimentée par l’API Spring Boot selon le scope.</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+  <script src="api.js"></script>
+  <script src="app.js"></script>
+  <script>
+    function lireFiltresDepuisUrl() {
+      const params = new URLSearchParams(window.location.search);
+      return {
+        statut: params.get('statut') || '',
+        dateDebut: params.get('dateDebut') || '',
+        dateFin: params.get('dateFin') || '',
+      };
+    }
+
+    function lireEtatReception(id) {
+      try {
+        const map = JSON.parse(sessionStorage.getItem('factureReceptionStates') || '{}');
+        return Boolean(map[id]);
+      } catch (error) {
+        return false;
+      }
+    }
+
+    function enregistrerEtatReception(id, etat) {
+      try {
+        const map = JSON.parse(sessionStorage.getItem('factureReceptionStates') || '{}');
+        map[id] = etat;
+        sessionStorage.setItem('factureReceptionStates', JSON.stringify(map));
+      } catch (error) {
+        // ignore storage issue
+      }
+    }
+
+    function valeurDeTri(facture, critere) {
+      const resultatOcr = facture.resultatOcr || facture.ocr || {};
+      switch (critere) {
+        case 'dateTraitement':
+          return facture.dateValidation || facture.dateTraitement || facture.dateReception || '';
+        case 'dateFacture':
+          return facture.dateFacture || '';
+        case 'dateEcheance':
+          return facture.dateEcheance || '';
+        case 'fournisseur':
+          return facture.fournisseur || '';
+        case 'numeroFacture':
+          return facture.numeroFacture || facture.id || '';
+        case 'statut':
+          return facture.statut || '';
+        case 'montantTTC':
+          return Number(facture.montantTTC || facture.montant || 0);
+        case 'dateReception':
+        default:
+          return facture.dateReception || '';
+      }
+    }
+
+    function lireConfianceOcr(facture) {
+      const brute = facture?.confianceMoyenne ?? facture?.resultatOcr?.confianceMoyenne ?? facture?.ocr?.confianceMoyenne;
+      const score = Number(brute);
+      return Number.isNaN(score) ? null : score;
+    }
+
+    function necessiteVerification(facture) {
+      const flag = facture?.necessiteVerification ?? facture?.resultatOcr?.necessiteVerification ?? facture?.ocr?.necessiteVerification;
+      return Boolean(flag);
+    }
+
+    function trierFactures(factures) {
+      const critere = document.getElementById('tri-factures')?.value || 'dateReception';
+      const ordre = document.getElementById('ordre-factures')?.value || 'desc';
+      const factor = ordre === 'asc' ? 1 : -1;
+      const facturesTriees = [...factures];
+      facturesTriees.sort((a, b) => {
+        const aValue = valeurDeTri(a, critere);
+        const bValue = valeurDeTri(b, critere);
+        if (aValue === bValue) return 0;
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+          return (aValue - bValue) * factor;
+        }
+        const aText = String(aValue).toLowerCase();
+        const bText = String(bValue).toLowerCase();
+        const comparison = aText < bText ? -1 : 1;
+        return comparison * factor;
+      });
+      return facturesTriees;
+    }
+
+    function computeDaysSince(dateStr) {
+      if (!dateStr) return null;
+      const d = new Date(dateStr);
+      if (isNaN(d)) return null;
+      const now = new Date();
+      const diff = now.getTime() - d.getTime();
+      return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
+    }
+
+    async function chargerFactures(filtres = null) {
+      try {
+        const statutFiltre = filtres?.statut ?? (document.getElementById('filtre-statut')?.value || '');
+        const dateDebut = filtres?.dateDebut ?? (document.getElementById('filtre-date-debut')?.value || '');
+        const dateFin = filtres?.dateFin ?? (document.getElementById('filtre-date-fin')?.value || '');
+        const searchFournisseur = (document.getElementById('search-fournisseur')?.value || '').trim();
+        const searchRefFournisseur = (document.getElementById('search-ref-fournisseur')?.value || '').trim();
+        const searchBonCommande = (document.getElementById('search-bon-commande')?.value || '').trim();
+        const factures = await window.preFactureApi.getFactures({
+          statut: statutFiltre,
+          dateDebut,
+          dateFin,
+          fournisseur: searchFournisseur,
+          refFournisseur: searchRefFournisseur,
+          bonDeCommande: searchBonCommande,
+        });
+        const rows = Array.isArray(factures) ? trierFactures(factures) : [];
+        const tbody = document.getElementById('rows');
+        if (!rows.length) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="7">
+                <div class="empty">
+                  <div class="empty__title">Aucune donnée disponible</div>
+                  <div>Cette table sera alimentée par l’API Spring Boot selon le scope.</div>
+                </div>
+              </td>
+            </tr>`;
+          return;
+        }
+        const role = document.body.dataset.role || '';
+        tbody.innerHTML = rows.map(f => {
+          const receptionnee = lireEtatReception(f.id) || f.receptionMarchandise || f.receptionnee;
+          const confiance = lireConfianceOcr(f);
+          const ocrCell = necessiteVerification(f)
+            ? `<span class="tag tag--review">${confiance !== null ? `${Math.round(confiance)}%` : '—'} · À vérifier</span>`
+            : (confiance !== null ? `${Math.round(confiance)}%` : '—');
+          const receptionCell = role === 'it'
+            ? `<button type="button" class="btn btn--sm reception-btn ${receptionnee ? 'is-received' : ''}" data-reception-action data-id="${f.id}">${receptionnee ? 'Réceptionnée' : 'À réceptionner'}</button>`
+            : (receptionnee ? '<span class="tag tag--valid">Réceptionnée</span>' : '<span class="tag tag--pending">Non réceptionnée</span>');
+          const days = computeDaysSince(f.dateReception);
+          const ageDisplay = days !== null ? days : (f.ageJours || '—');
+          return `
+            <tr data-id="${f.id}">
+              <td><span class="table__ref">${f.numeroFacture || f.id}</span></td>
+              <td>${f.fournisseur || '—'}</td>
+              <td>${f.dateReception || '—'}</td>
+              <td>${f.dateValidation || '—'}</td>
+              <td><span class="tag tag--${window.classeStatut(f.statut) || 'pending'}">${window.libelleStatut(f.statut)}</span></td>
+              <td>${receptionCell}</td>
+              <td>${ocrCell}</td>
+              <td class="table__amount">${ageDisplay}</td>
+            </tr>
+          `;
+        }).join('');
+        tbody.querySelectorAll('tr[data-id]').forEach(row => {
+          row.addEventListener('click', (event) => {
+            if (event.target.closest('[data-reception-action]')) return;
+            window.location.href = `facture.html?id=${row.dataset.id}`;
+          });
+        });
+        tbody.querySelectorAll('[data-reception-action]').forEach(button => {
+          button.addEventListener('click', async (event) => {
+            event.stopPropagation();
+            const id = button.dataset.id;
+            const estReceptionnee = lireEtatReception(id);
+            try {
+              if (!estReceptionnee) {
+                await window.preFactureApi.confirmerReceptionMarchandise(id);
+              }
+              const prochainEtat = !estReceptionnee;
+              enregistrerEtatReception(id, prochainEtat);
+              button.textContent = prochainEtat ? 'Réceptionnée' : 'À réceptionner';
+              button.classList.toggle('is-received', prochainEtat);
+            } catch (error) {
+              alert(error.message || 'Échec de la mise à jour de réception.');
+            }
+          });
+        });
+      } catch (error) {
+        document.getElementById('rows').innerHTML = `<tr><td colspan="8">${error.message}</td></tr>`;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const utilisateur = await window.verifierSession();
+      if (!utilisateur) return;
+      const filtresUrl = lireFiltresDepuisUrl();
+      document.body.dataset.role = (utilisateur.role || '').toLowerCase();
+      const subtitle = document.getElementById('scope-subtitle');
+      const title = document.getElementById('scope-title');
+      if (document.body.dataset.role === 'it') {
+        subtitle.textContent = 'Scope IT : suivi des statuts de matching OCR et traitement priorisé.';
+        title.textContent = 'File de traitement IT';
+        // show IT search controls
+        document.getElementById('search-fournisseur').style.display = 'inline-block';
+        document.getElementById('search-ref-fournisseur').style.display = 'inline-block';
+        document.getElementById('search-bon-commande').style.display = 'inline-block';
+      } else {
+        subtitle.textContent = 'Scope responsable : suivi des scans importés avant vérification IT.';
+        title.textContent = 'Scans du responsable';
+      }
+      const selectStatut = document.querySelector('select[name="statut"]') || document.querySelector('.select');
+      if (selectStatut && filtresUrl.statut) {
+        selectStatut.value = filtresUrl.statut;
+      }
+      const inputDateDebut = document.getElementById('filtre-date-debut');
+      if (inputDateDebut && filtresUrl.dateDebut) {
+        inputDateDebut.value = filtresUrl.dateDebut;
+      }
+      const inputDateFin = document.getElementById('filtre-date-fin');
+      if (inputDateFin && filtresUrl.dateFin) {
+        inputDateFin.value = filtresUrl.dateFin;
+      }
+      // debounce helper for search
+      function debounce(fn, wait) {
+        let t;
+        return function (...args) {
+          clearTimeout(t);
+          t = setTimeout(() => fn.apply(this, args), wait);
+        };
+      }
+
+      const debouncedReload = debounce(() => chargerFactures(), 450);
+      const sfEl = document.getElementById('search-fournisseur');
+      const srfEl = document.getElementById('search-ref-fournisseur');
+      const sbcEl = document.getElementById('search-bon-commande');
+      if (sfEl) sfEl.addEventListener('input', debouncedReload);
+      if (srfEl) srfEl.addEventListener('input', debouncedReload);
+      if (sbcEl) sbcEl.addEventListener('input', debouncedReload);
+
+      // inline clear buttons
+      document.querySelectorAll('.input-clear').forEach(btn => {
+        const targetId = btn.dataset.target;
+        const target = targetId ? document.getElementById(targetId) : null;
+        // show the clear control when input is visible
+        if (target) {
+          target.addEventListener('input', () => { btn.style.display = target.value ? 'inline-block' : 'none'; });
+          btn.addEventListener('click', () => {
+            target.value = '';
+            btn.style.display = 'none';
+            chargerFactures();
+            target.focus();
+          });
+        }
+      });
+
+      document.getElementById('btn-reset-filters')?.addEventListener('click', () => {
+        // clear selects and search fields, reset sorting
+        const selStatut = document.getElementById('filtre-statut'); if (selStatut) selStatut.value = '';
+        const selTri = document.getElementById('tri-factures'); if (selTri) selTri.value = 'dateReception';
+        const selOrdre = document.getElementById('ordre-factures'); if (selOrdre) selOrdre.value = 'desc';
+        const dateDeb = document.getElementById('filtre-date-debut'); if (dateDeb) dateDeb.value = '';
+        const dateFin = document.getElementById('filtre-date-fin'); if (dateFin) dateFin.value = '';
+        if (sfEl) sfEl.value = '';
+        if (srfEl) srfEl.value = '';
+        if (sbcEl) sbcEl.value = '';
+        // hide inline clear buttons
+        document.querySelectorAll('.input-clear').forEach(b => b.style.display = 'none');
+        // remove query params from URL (optional)
+        try {
+          const url = new URL(window.location);
+          url.search = '';
+          window.history.replaceState({}, '', url.toString());
+        } catch (e) {
+          // ignore
+        }
+        chargerFactures();
+      });
+      document.getElementById('filtre-statut')?.addEventListener('change', () => chargerFactures());
+      document.getElementById('filtre-date-debut')?.addEventListener('change', () => chargerFactures());
+      document.getElementById('filtre-date-fin')?.addEventListener('change', () => chargerFactures());
+      document.getElementById('tri-factures')?.addEventListener('change', () => chargerFactures());
+      document.getElementById('ordre-factures')?.addEventListener('change', () => chargerFactures());
+      await chargerFactures(filtresUrl);
+    });
+  </script>
+</body>
+</html>

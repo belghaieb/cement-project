@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin — Connexion · Préfacture · SCG</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="login">
+    <section class="login__left">
+      <div class="brand">
+        <div class="brand__eyebrow">Administration</div>
+        <div class="brand__name">Préfacture · Admin</div>
+        <div class="brand__app">Gestion des utilisateurs</div>
+      </div>
+      <div class="login__footer">
+        Accès réservé aux administrateurs · Connexion sécurisée requise
+      </div>
+    </section>
+    <section class="login__right">
+      <form class="login__form" id="admin-login-form">
+        <h1 class="login__title">Connexion administrateur</h1>
+        <p class="login__sub">Identifiez-vous avec vos identifiants d'administration.</p>
+        <div class="field">
+          <label class="field__label" for="admin-matricule">Matricule</label>
+          <input class="input" id="admin-matricule" type="text" placeholder="Ex. SCG-ADM-01" autocomplete="username" required />
+        </div>
+        <div class="field">
+          <label class="field__label" for="admin-password">Mot de passe</label>
+          <input class="input" id="admin-password" type="password" placeholder="••••••••" autocomplete="current-password" required />
+        </div>
+        <div class="field" id="admin-error" hidden style="color: #a83a3a; font-size: 12px;"></div>
+        <button type="submit" class="btn btn--primary btn--block">Se connecter</button>
+      </form>
+    </section>
+  </main>
+  <script src="api.js"></script>
+  <script>
+    document.getElementById('admin-login-form').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const username = document.getElementById('admin-matricule').value.trim();
+      const password = document.getElementById('admin-password').value;
+      const erreurDiv = document.getElementById('admin-error');
+
+      try {
+        const utilisateur = await window.preFactureApi.login(username, password);
+        if ((utilisateur.role || '').toUpperCase() !== 'ADMIN') {
+          throw new Error('Ce compte n’a pas accès à l’administration.');
+        }
+        window.preFactureApi.setAuthContext(utilisateur);
+        window.location.href = 'utilisateurs.html';
+      } catch (error) {
+        erreurDiv.textContent = error.message || 'Connexion impossible.';
+        erreurDiv.hidden = false;
+      }
+    });
+  </script>
+</body>
+</html>

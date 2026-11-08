@@ -1,0 +1,20 @@
+# Data folders with sensitive images
+prefacture/data/
+front/fronte/node_modules/
+front/node_modules/
+
+# IDE files
+prefacture/.idea/
+*.iml
+
+# Build artifacts
+prefacture/target/
+*.class
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.local

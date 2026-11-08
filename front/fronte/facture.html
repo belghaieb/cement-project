@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Detail scan OCR — Préfacture · SCG</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" data-shell="sidebar"></aside>
+    <header class="topbar">
+      <div class="topbar__crumbs">
+        <a href="factures.html" data-role-link style="color: var(--ciment);">Factures</a> / <strong>Detail scan</strong>
+      </div>
+      <div class="topbar__right" data-shell="topbar-right"></div>
+    </header>
+    <main class="main">
+      <div class="page-head">
+        <div style="display: flex; align-items: center; gap: 20px;">
+          <div>
+            <h1 class="page-head__title">Detail scan OCR</h1>
+            <div class="page-head__sub" id="detail-subtitle">Donnees de detail en attente backend.</div>
+          </div>
+          <div class="stamp stamp--ambre">
+            <span class="stamp__label">Statut</span>
+            <span class="stamp__value" id="status-value">En attente</span>
+            <div class="stamp__meta" id="status-meta">OCR + matching backend</div>
+          </div>
+        </div>
+        <div class="page-head__actions" id="head-actions">
+          <button class="btn btn--danger btn--sm" id="btn-reject">Rejeter</button>
+          <button class="btn btn--danger btn--sm" id="btn-delete" hidden>Supprimer</button>
+          <button class="btn btn--primary btn--sm" id="btn-validate">Valider la facture</button>
+          <button id="btn-confirmer-reception" class="btn btn--primary btn--sm" hidden>Marquer marchandises réceptionnées</button>
+        </div>
+      </div>
+      <div class="alert" id="alertes-bon-commande" hidden style="background: #fceaea; border-left-color: #a83a3a; margin-top: -4px;">
+        <div>
+          <div class="alert__title" style="color: #a83a3a;">Alertes bon de commande</div>
+          <ul id="alertes-bon-commande-list" style="margin: 0; padding-left: 18px;"></ul>
+        </div>
+      </div>
+      <div class="alert" id="alert-review">
+        <div>
+          <div class="alert__title" id="alert-review-title">Verification</div>
+          <div id="alert-detail">Les details de verification seront retournes par backend apres OCR et matching base de donnees.</div>
+        </div>
+      </div>
+      <section class="review">
+        <!-- LEFT: scanned document -->
+        <div class="scan">
+          <div class="scan__toolbar">
+            <span>Image scan</span>
+            <span>Apercu backend en attente</span>
+          </div>
+          <div class="scan__viewer">
+            <div id="image-scan-placeholder" class="empty">
+              <div class="empty__title">Aucune image disponible</div>
+              <div>Le scan sera affiché ici lorsqu'il est disponible côté backend.</div>
+            </div>
+            <img id="image-scan" src="" alt="Scan de la facture" style="max-width: 100%; display: none;">
+          </div>
+        </div>
+        <!-- RIGHT: extracted fields -->
+        <div class="review__panel">
+          <div class="review__panel-head">
+            <div class="panel__title">Champs extraits</div>
+            <span style="font-family: var(--font-display); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ciment);">
+              OCR backend
+            </span>
+          </div>
+          <div class="review__panel-body">
+            <div class="field-inline" data-field-row="fournisseur">
+              <div class="field-inline__label">Fournisseur</div>
+              <input class="field-inline__input" data-field="fournisseur" value="" placeholder="" />
+              <span class="confidence confidence--med" data-confidence="fournisseur">--</span>
+            </div>
+            <div class="field-inline" data-field-row="mfFournisseur">
+              <div class="field-inline__label">MF fournisseur</div>
+              <input class="field-inline__input" data-field="mfFournisseur" value="" placeholder="" />
+              <span class="confidence confidence--med" data-confidence="mfFournisseur">--</span>
+            </div>
+            <div class="field-inline" data-field-row="numeroFacture">
+              <div class="field-inline__label">N° facture</div>
+              <input class="field-inline__input" data-field="numeroFacture" value="" placeholder="" />
+              <span class="confidence confidence--med" data-confidence="numeroFacture">--</span>
+            </div>
+            <div class="field-inline" data-field-row="dateFacture">
+              <div class="field-inline__label">Date facture</div>
+              <input class="field-inline__input" data-field="dateFacture" type="date" value="" placeholder="" />
+              <span class="confidence confidence--med" data-confidence="dateFacture">--</span>
+            </div>
+            <div class="field-inline" data-field-row="dateEcheance">
+              <div class="field-inline__label">Date échéance</div>
+              <input class="field-inline__input" data-field="dateEcheance" type="date" value="" placeholder="" />
+              <span class="confidence confidence--med" data-confidence="dateEcheance">--</span>
+            </div>
+            <div class="field-inline" data-field-row="bonDeCommande">
+              <div class="field-inline__label">Bon de commande</div>
+              <input class="field-inline__input" data-field="bonDeCommande" value="" placeholder="" />
+              <span class="confidence confidence--med" data-confidence="bonDeCommande">--</span>
+            </div>
+            <div class="field-inline" data-field-row="montantHT">
+              <div class="field-inline__label">Montant HT</div>
+              <input class="field-inline__input" data-field="montantHT" type="number" step="0.01" value="" placeholder="" />
+              <span class="confidence confidence--med" data-confidence="montantHT">--</span>
+            </div>
+            <div class="field-inline" data-field-row="montantTVA">
+              <div class="field-inline__label">TVA (19%)</div>
+              <input class="field-inline__input" data-field="montantTVA" type="number" step="0.01" value="" placeholder="" />
+              <span class="confidence confidence--med" data-confidence="montantTVA">--</span>
+            </div>
+            <div class="field-inline" data-field-row="montantTTC">
+              <div class="field-inline__label">Montant TTC</div>
+              <input class="field-inline__input" data-field="montantTTC" type="number" step="0.01" value="" placeholder="" />
+              <span class="confidence confidence--med" data-confidence="montantTTC">--</span>
+            </div>
+            <div class="field-inline" data-field-row="devise">
+              <div class="field-inline__label">Devise</div>
+              <input class="field-inline__input" data-field="devise" value="" placeholder="" />
+              <span class="confidence confidence--med" data-confidence="devise">--</span>
+            </div>
+            <div class="field-inline" data-field-row="observations">
+              <div class="field-inline__label">Observations</div>
+              <input class="field-inline__input" data-field="observations" value="" placeholder="" />
+              <span class="confidence confidence--med" data-confidence="observations">--</span>
+            </div>
+            <div id="alt-fields-wrap" hidden style="margin-top: 12px; border-top: 1px dashed var(--ciment-light); padding-top: 10px;">
+              <div style="font-family: var(--font-display); font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: var(--ambre); margin-bottom: 6px;">Valeurs alternatives OCR</div>
+              <ul id="alt-fields-list" style="margin: 0; padding-left: 18px;"></ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="api.js"></script>
+  <script src="app.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const factureId = params.get('id');
+    const FIELD_KEYS = ['fournisseur', 'mfFournisseur', 'numeroFacture', 'dateFacture', 'dateEcheance', 'bonDeCommande', 'montantHT', 'montantTVA', 'montantTTC', 'devise', 'observations'];
+
+    function selectFieldInput(cle) {
+      return document.querySelector(`[data-field="${cle}"]`);
+    }
+
+    function selectFieldConfidence(cle) {
+      return document.querySelector(`[data-confidence="${cle}"]`);
+    }
+
+    function classeConfiance(score) {
+      if (typeof score !== 'number' || Number.isNaN(score)) return 'confidence--med';
+      if (score >= 90) return 'confidence--high';
+      if (score >= 70) return 'confidence--med';
+      return 'confidence--low';
+    }
+
+    function nettoyerValeur(valeur) {
+      if (valeur === undefined || valeur === null) return '';
+      return String(valeur).trim();
+    }
+
+    function extraireDepuisChamps(champs) {
+      const valeurs = {};
+      const confidences = {};
+      const alternatives = {};
+      if (!Array.isArray(champs)) {
+        return { valeurs, confidences, alternatives };
+      }
+
+      for (const champ of champs) {
+        const nomBrut = nettoyerValeur(champ?.nom);
+        const valeur = nettoyerValeur(champ?.valeur);
+        if (!nomBrut || !valeur) continue;
+
+        const isAlt = nomBrut.startsWith('_alt_');
+        const nom = isAlt ? nomBrut.replace('_alt_', '') : nomBrut;
+        if (!FIELD_KEYS.includes(nom)) continue;
+
+        if (isAlt) {
+          alternatives[nom] = { valeur, confiance: Number(champ?.confiance) };
+          continue;
+        }
+
+        valeurs[nom] = valeur;
+        confidences[nom] = Number(champ?.confiance);
+      }
+
+      return { valeurs, confidences, alternatives };
+    }
+
+    function normaliserPayloadFacture(facture) {
+      const resultatOcr = facture?.resultatOcr || facture?.ocr || null;
+      const sourceChamps = facture?.champs || resultatOcr?.champs || [];
+      const depuisChamps = extraireDepuisChamps(sourceChamps);
+
+      const valeurs = {};
+      const confidences = { ...depuisChamps.confidences };
+      FIELD_KEYS.forEach((cle) => {
+        valeurs[cle] = nettoyerValeur(depuisChamps.valeurs[cle] || facture?.[cle] || resultatOcr?.[cle] || '');
+      });
+
+      const confianceMoyenne = Number(
+        facture?.confianceMoyenne ?? resultatOcr?.confianceMoyenne ?? 0
+      ) || 0;
+
+      return {
+        valeurs,
+        confidences,
+        alternatives: depuisChamps.alternatives,
+        confianceMoyenne,
+        necessiteVerification: Boolean(
+          facture?.necessiteVerification ?? resultatOcr?.necessiteVerification
+        ),
+      };
+    }
+
+    function remplirChamps(normalise) {
+      for (const cle of FIELD_KEYS) {
+        const input = selectFieldInput(cle);
+        const badge = selectFieldConfidence(cle);
+        if (input) input.value = normalise.valeurs[cle] || '';
+        if (badge) {
+          const score = normalise.confidences[cle];
+          badge.classList.remove('confidence--high', 'confidence--med', 'confidence--low');
+          badge.classList.add(classeConfiance(score));
+          badge.textContent = typeof score === 'number' && !Number.isNaN(score) ? `${Math.round(score)}%` : '--';
+        }
+      }
+    }
+
+    function afficherAlternatives(alternatives) {
+      const wrap = document.getElementById('alt-fields-wrap');
+      const liste = document.getElementById('alt-fields-list');
+      if (!wrap || !liste) return;
+
+      const entrees = Object.entries(alternatives || {});
+      if (!entrees.length) {
+        wrap.hidden = true;
+        liste.innerHTML = '';
+        return;
+      }
+
+      liste.innerHTML = entrees.map(([nom, data]) => {
+        const conf = typeof data?.confiance === 'number' && !Number.isNaN(data.confiance)
+          ? ` (${Math.round(data.confiance)}%)`
+          : '';
+        return `<li><strong>${nom}</strong>: ${data.valeur}${conf}</li>`;
+      }).join('');
+      wrap.hidden = false;
+    }
+
+    function mettreAJourBandeauVerification(facture, normalise) {
+      const titre = document.getElementById('alert-review-title');
+      const detail = document.getElementById('alert-detail');
+      const statutMeta = document.getElementById('status-meta');
+
+      const hasAlt = Object.keys(normalise.alternatives || {}).length > 0;
+      const needsReview = Boolean(normalise.necessiteVerification || hasAlt);
+
+      if (titre) {
+        titre.textContent = needsReview ? 'Verification requise' : 'Verification';
+      }
+      if (detail) {
+        detail.textContent = needsReview
+          ? (facture.observations || 'Divergence detectee entre OCR principal et OCR alternatif. Controle humain recommande.')
+          : (facture.observations || 'Extraction OCR chargee. Aucun conflit majeur detecte.');
+      }
+      if (statutMeta) {
+        statutMeta.textContent = normalise.confianceMoyenne > 0
+          ? `Confiance OCR: ${Math.round(normalise.confianceMoyenne)}%`
+          : (facture.dateReception || '—');
+      }
+    }
+
+    function remplirFacture(facture) {
+      const normalise = normaliserPayloadFacture(facture || {});
+
+      document.getElementById('detail-subtitle').textContent = `Facture ${normalise.valeurs.numeroFacture || facture.id}`;
+      document.getElementById('status-value').textContent = window.libelleStatut(facture.statut);
+
+      const receptionnee = lireEtatReception(factureId) || facture.receptionMarchandise || facture.receptionnee;
+      mettreAJourBoutonReception(Boolean(receptionnee));
+
+      remplirChamps(normalise);
+      afficherAlternatives(normalise.alternatives);
+      mettreAJourBandeauVerification(facture, normalise);
+
+      updateValidateButtonState();
+    }
+
+    function afficherAlertesBonCommande(alertes) {
+      const blocAlertes = document.getElementById('alertes-bon-commande');
+      const liste = document.getElementById('alertes-bon-commande-list');
+      if (!blocAlertes || !liste) return;
+      if (!Array.isArray(alertes) || alertes.length === 0) {
+        blocAlertes.hidden = true;
+        liste.innerHTML = '';
+        return;
+      }
+      liste.innerHTML = alertes.map((alerte) => `<li>${alerte}</li>`).join('');
+      blocAlertes.hidden = false;
+    }
+
+    function consommerAlertesScan() {
+      const brut = sessionStorage.getItem('scanAlertesBonCommande');
+      sessionStorage.removeItem('scanAlertesBonCommande');
+      if (!brut) return [];
+      try {
+        const parse = JSON.parse(brut);
+        return Array.isArray(parse) ? parse : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function lireEtatReception(id) {
+      try {
+        const map = JSON.parse(sessionStorage.getItem('factureReceptionStates') || '{}');
+        return Boolean(map[id]);
+      } catch (error) {
+        return false;
+      }
+    }
+
+    function enregistrerEtatReception(id, etat) {
+      try {
+        const map = JSON.parse(sessionStorage.getItem('factureReceptionStates') || '{}');
+        map[id] = etat;
+        sessionStorage.setItem('factureReceptionStates', JSON.stringify(map));
+      } catch (error) {
+        // ignore storage issue
+      }
+    }
+
+    function mettreAJourBoutonReception(etat) {
+      const bouton = document.getElementById('btn-confirmer-reception');
+      if (!bouton) return;
+      bouton.textContent = etat ? 'Marchandises réceptionnées' : 'Marquer marchandises réceptionnées';
+      bouton.classList.toggle('is-received', etat);
+    }
+
+    function updateValidateButtonState() {
+      const btn = document.getElementById('btn-validate');
+      if (!btn) return;
+      const fournisseur = nettoyerValeur(selectFieldInput('fournisseur')?.value);
+      const numero = nettoyerValeur(selectFieldInput('numeroFacture')?.value);
+      const enabled = Boolean(fournisseur && numero);
+      btn.disabled = !enabled;
+      if (!enabled) {
+        btn.classList.add('btn--ghost');
+        btn.title = 'Impossible de valider: fournisseur et numéro requis.';
+      } else {
+        btn.classList.remove('btn--ghost');
+        btn.title = '';
+      }
+    }
+
+    async function chargerFacture() {
+      if (!factureId) {
+        document.getElementById('detail-subtitle').textContent = 'Aucune facture sélectionnée.';
+        return;
+      }
+
+      const TIMEOUT_MS = 5000;
+      // helper to clear UI when backend times out or fails
+      function clearFieldsForTimeout() {
+        document.getElementById('detail-subtitle').textContent = 'Aucune donnée backend (délai dépassé)';
+        document.getElementById('alert-detail').textContent = 'Le backend a mis du temps à répondre. Les champs sont vides par défaut.';
+        remplirChamps({ valeurs: {}, confidences: {}, alternatives: {} });
+        afficherAlternatives({});
+        const imgScan = document.getElementById('image-scan');
+        const imageScanPlaceholder = document.getElementById('image-scan-placeholder');
+        if (imgScan) imgScan.style.display = 'none';
+        if (imageScanPlaceholder) imageScanPlaceholder.style.display = 'block';
+        updateValidateButtonState();
+      }
+
+      try {
+        const fetchPromise = window.preFactureApi.getFacture(factureId);
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), TIMEOUT_MS));
+        let facture = null;
+        try {
+          facture = await Promise.race([fetchPromise, timeoutPromise]);
+        } catch (err) {
+          // timeout or network error -> clear fields and start polling for late backend response
+          clearFieldsForTimeout();
+          // start polling every 3s up to 30s total
+          const POLL_INTERVAL = 3000;
+          const POLL_MAX = 30000;
+          let elapsed = 0;
+          const pollId = setInterval(async () => {
+            elapsed += POLL_INTERVAL;
+            try {
+              const f = await window.preFactureApi.getFacture(factureId);
+              if (f) {
+                clearInterval(pollId);
+                // populate fields with the late response
+                remplirFacture(f);
+                // attempt to load image if present
+                const imgScanLate = document.getElementById('image-scan');
+                const imageScanPlaceholderLate = document.getElementById('image-scan-placeholder');
+                if (imgScanLate) {
+                  imgScanLate.src = window.preFactureApi.getImageScanUrl(factureId);
+                  imgScanLate.onload = () => { imgScanLate.style.display = 'block'; if (imageScanPlaceholderLate) imageScanPlaceholderLate.style.display = 'none'; };
+                  imgScanLate.onerror = () => { imgScanLate.style.display = 'none'; if (imageScanPlaceholderLate) imageScanPlaceholderLate.style.display = 'block'; };
+                }
+              }
+            } catch (pollErr) {
+              // ignore until timeout reaches max
+            }
+            if (elapsed >= POLL_MAX) {
+              clearInterval(pollId);
+            }
+          }, POLL_INTERVAL);
+          return;
+        }
+
+        if (!facture) {
+          clearFieldsForTimeout();
+          return;
+        }
+
+        remplirFacture(facture);
+
+        const imgScan = document.getElementById('image-scan');
+        const imageScanPlaceholder = document.getElementById('image-scan-placeholder');
+        if (imageScanPlaceholder) imageScanPlaceholder.style.display = 'none';
+        if (imgScan) {
+          imgScan.src = window.preFactureApi.getImageScanUrl(factureId);
+          imgScan.onload = () => {
+            imgScan.style.display = 'block';
+            if (imageScanPlaceholder) imageScanPlaceholder.style.display = 'none';
+          };
+          imgScan.onerror = () => {
+            imgScan.style.display = 'none';
+            if (imageScanPlaceholder) imageScanPlaceholder.style.display = 'block';
+          };
+        }
+
+        updateValidateButtonState();
+      } catch (error) {
+        document.getElementById('detail-subtitle').textContent = error.message;
+        updateValidateButtonState();
+      }
+    }
+
+    document.getElementById('btn-validate')?.addEventListener('click', async () => {
+      const fournisseur = nettoyerValeur(selectFieldInput('fournisseur')?.value);
+      const numero = nettoyerValeur(selectFieldInput('numeroFacture')?.value);
+      if (!fournisseur || !numero) {
+        alert('Impossible de valider: la facture doit avoir un fournisseur et un numéro.');
+        return;
+      }
+      try {
+        await window.preFactureApi.validateFacture(factureId);
+        window.location.reload();
+      } catch (error) {
+        alert(error.message);
+      }
+    });
+
+    document.getElementById('btn-reject')?.addEventListener('click', async () => {
+      try {
+        await window.preFactureApi.rejectFacture(factureId);
+        // If IT rejects, backend may remove the record — return to list
+        window.location.href = 'factures.html';
+      } catch (error) {
+        alert(error.message);
+      }
+    });
+
+    document.getElementById('btn-delete')?.addEventListener('click', async () => {
+      if (!factureId) {
+        alert('Aucune facture sélectionnée.');
+        return;
+      }
+      const confirme = window.confirm('Confirmer la suppression de cette facture ?');
+      if (!confirme) return;
+      try {
+        await window.preFactureApi.deleteFacture(factureId);
+        window.location.href = `factures.html?deleted=1&deletedId=${encodeURIComponent(factureId)}`;
+      } catch (error) {
+        alert(error.message || 'Échec de la suppression.');
+      }
+    });
+
+    document.getElementById('btn-confirmer-reception')?.addEventListener('click', async () => {
+      if (!factureId) return;
+      const etatActuel = lireEtatReception(factureId);
+      try {
+        if (!etatActuel) {
+          await window.preFactureApi.confirmerReceptionMarchandise(factureId);
+        }
+        const prochainEtat = !etatActuel;
+        enregistrerEtatReception(factureId, prochainEtat);
+        mettreAJourBoutonReception(prochainEtat);
+      } catch (error) {
+        alert(error.message || 'Échec de confirmation de réception.');
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const utilisateur = await window.verifierSession();
+      if (!utilisateur) return;
+      const roleRaw = (utilisateur.role || '').toLowerCase();
+      const role = roleRaw === 'responsable_facture' ? 'responsable' : roleRaw;
+      document.body.dataset.role = role;
+      afficherAlertesBonCommande(consommerAlertesScan());
+
+      // Visibility rules:
+      // - IT: can validate, reject, and confirm reception
+      // - Responsable: can confirm reception, but cannot validate/reject
+      // - Others: no action buttons
+
+      // Remove validate/reject for non-IT users
+      if (role !== 'it') {
+        document.querySelectorAll('#btn-validate, #btn-reject').forEach(el => el.remove());
+      }
+
+      if (role === 'responsable') {
+        document.getElementById('btn-delete')?.removeAttribute('hidden');
+      } else {
+        document.querySelectorAll('#btn-delete').forEach(el => el.remove());
+      }
+
+      if (role === 'it') {
+        document.getElementById('btn-confirmer-reception')?.removeAttribute('hidden');
+      } else {
+        document.querySelectorAll('#btn-confirmer-reception').forEach(el => el.remove());
+      }
+
+      await chargerFacture();
+    });
+  </script>
+</body>
+</html>
