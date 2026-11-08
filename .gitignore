@@ -11,6 +11,14 @@ prefacture/.idea/
 prefacture/target/
 *.class
 
+# Large local SDK / generated content
+javafx-21_windows-x64_bin-sdk/
+**/javafx-21_windows-x64_bin-sdk/
+
+# Office / local artifacts
+*.odt
+*.pdf
+
 # OS files
 .DS_Store
 Thumbs.db
